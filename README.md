@@ -18,7 +18,7 @@ Both the forward and backward passes are fully parallelized on the GPU. The netw
 
 ## Optimizations
 
-The baseline version is implemented in a straightforward, naive manner. Although it fully parallelizes both the forward and backward passes on the GPU, it does not employ any advanced optimization techniques. In contrast, the optimized version incorporates several enhancements to improve performance.
+The baseline version is implemented in a straightforward, naive manner. Although it implements both the forward and backward passes on the GPU, it does not employ any advanced optimization techniques. In contrast, the optimized version incorporates several enhancements to improve performance.
 
 Optimizations employed in the optimized version include:
 
