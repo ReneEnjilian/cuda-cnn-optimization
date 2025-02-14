@@ -1,23 +1,23 @@
 /*****************************************************************************
- * File: cnn_mnist_basic.cu
+ * File: cnn_baseline.cu
  *
  * A from-scratch CNN on MNIST with no advanced CUDA optimizations.
  *
  * Architecture:
- *  - Convolution layer (8 filters, 5x5, stride=1, no padding)
+ *  - Convolution layer 
  *  - ReLU
  *  - 2x2 MaxPool
- *  - Fully Connected (8*12*12 -> 10)
+ *  - Fully Connected 
  *  - Softmax + Cross Entropy
  *
  * Stochastic Gradient Descent is used to update weights.
  *
  * Expected to achieve >90% accuracy (with enough epochs).
  *
- * Compile: nvcc cnn_mnist_basic.cu -o cnn_mnist_basic
+ * Compile: nvcc cnn_baseline.cu -o cnn_baseline or via Makefile 
  *****************************************************************************/
 
-//#include <iostream>
+
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -35,7 +35,7 @@
 
 // Convolution layer
 #define FILTER_SIZE     5
-#define NUM_FILTERS     32
+#define NUM_FILTERS     8
 // Output from 5x5 kernel, stride=1, no padding => 24x24
 #define CONV_OUT_ROWS   (IMAGE_ROWS - FILTER_SIZE + 1)
 #define CONV_OUT_COLS   (IMAGE_COLS - FILTER_SIZE + 1)
@@ -54,7 +54,7 @@
 #define BLOCK_SIZE      256  // for generic kernels
 
 // ---------------------------------------------------------------------------------
-// CUDA error check (optional; disabled by default for brevity)
+// CUDA error checking 
 // ---------------------------------------------------------------------------------
 #define DEBUG
 inline void checkCudaError(const char *msg) {
@@ -153,7 +153,6 @@ __global__
 void convForwardKernel(const float* in, const float* w, const float* b,
                        float* out, int batchSize)
 {
-    // out shape = [batchSize, NUM_FILTERS, 24, 24]
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int total = batchSize * NUM_FILTERS * CONV_OUT_ROWS * CONV_OUT_COLS;
     if (index >= total) return;
@@ -291,7 +290,6 @@ void maxPoolForwardKernel(const float* in, float* out, int* maxIdx, int batchSiz
 
 __global__
 void flattenPoolKernel(const float* in, float* out, int batchSize) {
-    // Flatten [B, NUM_FILTERS, 12, 12] -> [B, FLATTEN_SIZE]
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total = batchSize * NUM_FILTERS * POOL_OUT_ROWS * POOL_OUT_COLS;
     if(idx >= total) return;
