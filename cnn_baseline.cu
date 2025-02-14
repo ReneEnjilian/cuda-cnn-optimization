@@ -1158,7 +1158,7 @@ int main(){
     printf("Test accuracy = %.2f%%\n", accuracy*100.f);
 
     // ---------------------------------------------------------------------------
-    // Cleanup
+    // Cleanup: Free memory 
     // ---------------------------------------------------------------------------
     free(h_trainImages);
     free(h_trainLabels);
