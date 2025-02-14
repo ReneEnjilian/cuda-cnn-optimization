@@ -2,7 +2,7 @@
 
 ## Description
 
-This project presents an end-to-end implementation of a convolutional neural network (CNN) built entirely from scratch using CUDA. Two versions of the CNN are provided: a baseline implementation (cnn_baseline.cu) and an optimized version (cnn_optimized.cu) that applies a range of CUDA optimization techniques. Both the forward and backward passes are fully parallelized on the GPU without relying on any external deep learning libraries. We do not rely on any deep learning or CUDA libraries (e.g., cuBLAS, cuDNN, etc.).
+This project presents an end-to-end implementation of a convolutional neural network (CNN) built entirely from scratch using CUDA. Two versions of the CNN are provided: a baseline implementation (cnn_baseline.cu) and an optimized version (cnn_optimized.cu) that applies a range of CUDA optimization techniques. Both the forward and backward passes are fully parallelized on the GPU without relying on any external deep learning or CUDA libraries (e.g., cuBLAS, cuDNN, etc.).
 
 The network architecture comprises:
 - A convolutional layer followed by a ReLU activation,
