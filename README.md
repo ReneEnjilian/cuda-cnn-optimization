@@ -1,4 +1,4 @@
-# CNN Optimization Project
+# CNN CUDA-Optimization Project
 
 ## Description
 
