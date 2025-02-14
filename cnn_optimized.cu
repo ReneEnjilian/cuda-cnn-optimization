@@ -1,22 +1,25 @@
 /*****************************************************************************
 * File: cnn_optimized.cu
- *
- * Demonstrates triple-buffering for overlapping data H->D transfers
- * with forward/backward computation in a simple from-scratch CNN.
- *
- * Architecture:
- *  - Convolution layer (8 filters, 5x5, stride=1, no padding)
- *    Fused with ReLU in the forward pass.
- *  - 2x2 MaxPool + Flatten (fused forward)
- *  - Fully Connected (8*12*12 -> 10)
- *  - Softmax + Cross Entropy
- *
- * In the backward pass, a fused max-pooling backward kernel is used.
- *
- * Stochastic Gradient Descent is used to update weights.
- *
- * Compile: nvcc cnn_optimized.cu -o cnn_optimized
- *****************************************************************************/
+*
+* This file contains an optimized implementation of a convolutional neural 
+* network developed entirely from scratch using CUDA. The optimized version 
+* incorporates various techniques—such as overlapping host-device transfers,
+* kernel fusion, and efficient memory management—to significantly improve 
+* performance.
+*
+* Network Architecture:
+*  - A convolutional layer fused with a ReLU activation for the forward pass.
+*  - A max pooling layer fused with a flatten operation.
+*  - A fully-connected layer.
+*  - A softmax layer combined with cross-entropy loss.
+*
+* For the backward pass, a fused max pooling backward kernel is employed.
+*
+* Stochastic Gradient Descent (SGD) is used to update the network parameters.
+*
+* Compile: nvcc cnn_optimized.cu -o cnn_optimized
+*****************************************************************************/
+
 
 #include <cstdio>
 #include <cstdlib>
@@ -35,15 +38,15 @@
 
 // Convolution layer
 #define FILTER_SIZE     5
-#define NUM_FILTERS     32
+#define NUM_FILTERS     8
 // Output from 5x5 kernel, stride=1 => 24x24
 #define CONV_OUT_ROWS   (IMAGE_ROWS - FILTER_SIZE + 1)
 #define CONV_OUT_COLS   (IMAGE_COLS - FILTER_SIZE + 1)
 
 // MaxPool 2x2 => 12x12
 #define POOL_SIZE       2
-#define POOL_OUT_ROWS   (CONV_OUT_ROWS / POOL_SIZE)  // 24/2 = 12
-#define POOL_OUT_COLS   (CONV_OUT_COLS / POOL_SIZE)  // 24/2 = 12
+#define POOL_OUT_ROWS   (CONV_OUT_ROWS / POOL_SIZE)  
+#define POOL_OUT_COLS   (CONV_OUT_COLS / POOL_SIZE)  
 #define FLATTEN_SIZE    (NUM_FILTERS * POOL_OUT_ROWS * POOL_OUT_COLS)
 
 // Training config
@@ -453,7 +456,7 @@ void fcBackwardGradParamKernel(const float* gradOut, const float* in,
     }
     
     // Declare shared memory for reduction.
-    __shared__ float sdata[32][tileSize]; // [blockDim.x][tileSize]
+    __shared__ float sdata[32][tileSize]; 
     sdata[threadIdx.x][threadIdx.y] = sum;
     __syncthreads();
     
@@ -505,15 +508,15 @@ void fcBackwardGradInKernel(const float* gradOut, const float* w,
     int baseW = k * NUM_CLASSES;
     // Fully unroll the 10 iterations using fmaf for fused multiply-add.
     sumVal = fmaf(gradOut[baseGrad + 0], w[baseW + 0], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 1], w[baseW + 1], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 2], w[baseW + 2], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 3], w[baseW + 3], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 4], w[baseW + 4], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 5], w[baseW + 5], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 6], w[baseW + 6], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 7], w[baseW + 7], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 8], w[baseW + 8], sumVal);
-  sumVal = fmaf(gradOut[baseGrad + 9], w[baseW + 9], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 1], w[baseW + 1], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 2], w[baseW + 2], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 3], w[baseW + 3], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 4], w[baseW + 4], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 5], w[baseW + 5], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 6], w[baseW + 6], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 7], w[baseW + 7], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 8], w[baseW + 8], sumVal);
+    sumVal = fmaf(gradOut[baseGrad + 9], w[baseW + 9], sumVal);
     
     gradIn[idx] = sumVal;
 }
@@ -707,8 +710,6 @@ void convBackwardInputKernel(const float* gradConvOut, const float* w,
     int b = blockIdx.x;
     if(b >= batchSize) return; 
 
-    // Statically allocate shared memory for gradConvOut for one sample.
-    // Size = NUM_FILTERS * CONV_OUT_ROWS * CONV_OUT_COLS
     __shared__ float sgrad[NUM_FILTERS * CONV_OUT_ROWS * CONV_OUT_COLS];
     int totalConv = NUM_FILTERS * CONV_OUT_ROWS * CONV_OUT_COLS;
     
@@ -796,7 +797,9 @@ void sgdUpdateKernel(float* param, const float* grad, float lr, int n){
 ***********************************************************************************/
 
 int main(){
-    // 1) Read MNIST data into host arrays
+    // ---------------------------------------------------------------------------
+    // 1) Load data (host)
+    // ---------------------------------------------------------------------------
     float* h_trainImages = (float*)malloc(TRAIN_IMAGES * IMAGE_ROWS * IMAGE_COLS * sizeof(float));
     int*   h_trainLabels = (int*)malloc(TRAIN_IMAGES * sizeof(int));
     float* h_testImages  = (float*)malloc(TEST_IMAGES * IMAGE_ROWS * IMAGE_COLS * sizeof(float));
@@ -808,7 +811,9 @@ int main(){
     readMNISTImages("t10k-images.idx3-ubyte", h_testImages, TEST_IMAGES);
     readMNISTLabels("t10k-labels.idx1-ubyte", h_testLabels, TEST_IMAGES);
  
+    // ---------------------------------------------------------------------------
     // 2) Allocate device memory for parameters/activations and triple-buffered batch data
+    // ---------------------------------------------------------------------------
     size_t imageBytesPerBatch = BATCH_SIZE * IMAGE_ROWS * IMAGE_COLS * sizeof(float);
     float* d_trainImages[NUM_BUFFERS];
     int*   d_labels[NUM_BUFFERS];
@@ -852,7 +857,9 @@ int main(){
     float *d_grad_in;
     CHECK_CUDA(cudaMalloc(&d_grad_in, BATCH_SIZE * IMAGE_ROWS * IMAGE_COLS * sizeof(float)));
  
+    // ---------------------------------------------------------------------------
     // 3) Initialize weights on host -> copy to device
+    // ---------------------------------------------------------------------------
     srand(123);
     auto randf = [](){ return 0.01f * ((float)rand() / RAND_MAX - 0.5f); };
     float* h_convW = (float*)malloc(convW_size * sizeof(float));
@@ -874,7 +881,9 @@ int main(){
     CHECK_CUDA(cudaMemcpy(d_fcB, h_fcB, NUM_CLASSES * sizeof(float), cudaMemcpyHostToDevice));
     free(h_fcW); free(h_fcB);
  
+    // ---------------------------------------------------------------------------
     // 4) Create streams and pinned host buffers (triple buffering)
+    // ---------------------------------------------------------------------------
     cudaStream_t stream[NUM_BUFFERS];
     for (int i = 0; i < NUM_BUFFERS; i++){
         CHECK_CUDA(cudaStreamCreate(&stream[i]));
@@ -891,7 +900,9 @@ int main(){
     CHECK_CUDA(cudaEventCreate(&stopEvent));
     CHECK_CUDA(cudaEventRecord(startEvent, 0));
  
+    // ---------------------------------------------------------------------------
     // 5) Training with triple-buffering
+    // ---------------------------------------------------------------------------
     int nBatches = TRAIN_IMAGES / BATCH_SIZE;
     printf("Starting training for %d epochs...\n", EPOCHS);
     for (int e = 0; e < EPOCHS; e++){
@@ -980,7 +991,6 @@ int main(){
                 CHECK_CUDA(cudaMemsetAsync(d_grad_convW, 0, convW_size * sizeof(float), stream[curIdx]));
                 CHECK_CUDA(cudaMemsetAsync(d_grad_convB, 0, NUM_FILTERS * sizeof(float), stream[curIdx]));
                 int totalParams = FLATTEN_SIZE * NUM_CLASSES + NUM_CLASSES;
-                //int grid = (totalParams + BLOCK_SIZE - 1) / BLOCK_SIZE;
                 convBackwardWeightKernel<<< totalParams, 32, 0, stream[curIdx] >>>(d_trainImages[curIdx], d_grad_convOut, d_grad_convW, d_grad_convB, BATCH_SIZE);
 
             }
@@ -1039,9 +1049,8 @@ int main(){
     float elapsedTime = 0.f;
     CHECK_CUDA(cudaEventElapsedTime(&elapsedTime, startEvent, stopEvent));
 
-
     // ---------------------------------------------------------------------------------
-    // Testing Phase: Evaluate trained model on unseen MNIST test data
+    // 6) Testing Phase: Evaluate trained model on unseen MNIST test data
     // ---------------------------------------------------------------------------------
     {
         dim3 fcGrid((NUM_CLASSES + 16 - 1)/16, (BATCH_SIZE + 16 - 1)/16);
@@ -1094,8 +1103,6 @@ int main(){
         printf("Test accuracy = %.2f%%\n", accuracy * 100.f);
     }
  
-
-
     // ---------------------------------------------------------------------------------
     // Cleanup: Free memory 
     // ---------------------------------------------------------------------------------
