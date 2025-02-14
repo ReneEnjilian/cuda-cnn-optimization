@@ -11,8 +11,8 @@ INCLUDE_DIRS = -I$(CUDA_HOME)/include
 LIBS = -L$(CUDA_HOME)/lib64 -lcudart -lcuda
 
 # Source and executable
-SRC = cnn_baseline.cu
-EXEC = baseline
+SRC = cnn_optimized.cu
+EXEC = cnn_optimized
 
 # Flags for compiling
 NVCC_FLAGS = -arch=sm_80 -lineinfo -Xcompiler $(CXXFLAGS)
