@@ -13,7 +13,7 @@ The network architecture comprises:
 - Stochastic Gradient Descent (SGD) to update parameters.
 
 
-Both the forward and backward passes are fully parallelized on the GPU. The network is trained on the MNIST dataset, and the trained model is subsequently evaluated on the MNIST test set to verify correctness. In addition to measuring model accuracy for validation, training time is recorded to compare the performance improvements achieved through CUDA optimizations.
+The network is trained on the MNIST dataset, and the trained model is subsequently evaluated on the MNIST test set to verify correctness. A high model accuracy (>90%) indicates correctness. In addition to measuring model accuracy for validation, training time is recorded to compare the performance improvements achieved through CUDA optimizations.
 
 
 ## Optimizations
